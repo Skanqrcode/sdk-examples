@@ -1,0 +1,12 @@
+[package]
+name = "skanqrcode"
+version = "0.1.0"
+edition = "2021"
+description = "Client for the SkanQRCode URL/QR-code safety API"
+license = "Apache-2.0"
+
+[dependencies]
+reqwest = { version = "0.12", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"

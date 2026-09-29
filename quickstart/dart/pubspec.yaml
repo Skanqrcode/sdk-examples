@@ -1,0 +1,9 @@
+name: skanqrcode_quickstart
+description: Minimal example of calling the SkanQRCode API directly with package:http.
+publish_to: none
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  http: ^1.2.0

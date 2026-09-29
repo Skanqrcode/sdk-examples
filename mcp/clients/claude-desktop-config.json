@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "skanqrcode": {
+      "command": "npx",
+      "args": ["-y", "@skanqrcode/mcp-server-example"],
+      "env": {
+        "SKANQRCODE_API_KEY": "lure_test_..."
+      }
+    }
+  }
+}
