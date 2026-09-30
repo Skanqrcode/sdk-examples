@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,13 +18,14 @@ type checkRequest struct {
 }
 
 type checkResponse struct {
-	Verdict   string   `json:"verdict"`
-	Mode      string   `json:"mode"`
-	Score     int      `json:"score"`
-	Reasons   []string `json:"reasons"`
-	Cached    bool     `json:"cached"`
-	Partial   bool     `json:"partial"`
-	RequestID string   `json:"requestId"`
+	Verdict         string   `json:"verdict"`
+	Action          string   `json:"action"`
+	Mode            string   `json:"mode"`
+	Reasons         []string `json:"reasons"`
+	Cached          bool     `json:"cached"`
+	ExecutionTimeMs int      `json:"executionTimeMs"`
+	Environment     string   `json:"environment"`
+	RequestID       string   `json:"requestId"`
 }
 
 type errorResponse struct {
@@ -52,18 +54,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("verdict:    %s\n", result.Verdict)
-	fmt.Printf("mode:       %s\n", result.Mode)
-	fmt.Printf("score:      %d\n", result.Score)
-	fmt.Printf("reasons:    %v\n", result.Reasons)
-	fmt.Printf("cached:     %t\n", result.Cached)
-	fmt.Printf("partial:    %t\n", result.Partial)
-	fmt.Printf("requestId:  %s\n", result.RequestID)
+	fmt.Printf("verdict:         %s\n", result.Verdict)
+	fmt.Printf("action:          %s\n", result.Action)
+	fmt.Printf("mode:            %s\n", result.Mode)
+	fmt.Printf("reasons:         %v\n", result.Reasons)
+	fmt.Printf("cached:          %t\n", result.Cached)
+	fmt.Printf("executionTimeMs: %d\n", result.ExecutionTimeMs)
+	fmt.Printf("environment:     %s\n", result.Environment)
+	fmt.Printf("requestId:       %s\n", result.RequestID)
 
-	if result.Verdict == "malicious" {
+	if result.Action == "block" {
 		fmt.Println("\nBLOCK: do not open this link.")
-	} else if result.Verdict == "suspicious" {
+	} else if result.Action == "warn" {
 		fmt.Println("\nWARN: proceed with caution.")
+	}
+	if result.Environment == "sandbox" {
+		fmt.Println("(sandbox key: results are for integration testing only)")
 	}
 }
 
@@ -95,10 +101,18 @@ func checkURL(apiKey, target string) (*checkResponse, error) {
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		var apiErr errorResponse
-		if err := json.Unmarshal(respBody, &apiErr); err != nil {
-			return nil, fmt.Errorf("http %d: %s", resp.StatusCode, string(respBody))
+		if err := json.Unmarshal(respBody, &apiErr); err != nil || apiErr.Error.Code == "" {
+			// Not the documented JSON (e.g. an HTML 502 from a proxy).
+			return nil, fmt.Errorf("internal: http %d: %s", resp.StatusCode, string(respBody))
 		}
-		return nil, fmt.Errorf("%s: %s (requestId=%s)", apiErr.Error.Code, apiErr.Error.Message, apiErr.Error.RequestID)
+		msg := fmt.Sprintf("%s: %s (http %d, requestId=%s)", apiErr.Error.Code, apiErr.Error.Message, resp.StatusCode, apiErr.Error.RequestID)
+		switch apiErr.Error.Code {
+		case "rate_limited":
+			msg += fmt.Sprintf("; retry in %ss", resp.Header.Get("Retry-After"))
+		case "quota_exceeded":
+			msg += "; monthly quota exhausted, retrying won't help"
+		}
+		return nil, errors.New(msg)
 	}
 
 	var result checkResponse

@@ -34,31 +34,54 @@ public class Main {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
+            // Error bodies are {"error":{"code","message","requestId"}}; a proxy may return HTML instead.
             String code = extractString(response.body(), "code");
+            if (code == null) {
+                code = "internal";
+            }
             String message = extractString(response.body(), "message");
             String requestId = extractString(response.body(), "requestId");
-            System.err.println("SkanQRCode error [" + code + "]: " + message + " (requestId=" + requestId + ")");
+            String retryAfter = response.headers().firstValue("Retry-After").orElse(null);
+            System.err.println("SkanQRCode error [" + code + "] HTTP " + response.statusCode() + ": " + message
+                    + " (requestId=" + requestId + ")");
+            switch (code) {
+                case "rate_limited":
+                    System.err.println("Too many requests: retry in " + retryAfter + "s");
+                    break;
+                case "quota_exceeded":
+                case "payment_required":
+                case "unauthorized":
+                    System.err.println("Configuration problem (key, plan or quota) - retrying won't help");
+                    break;
+                default:
+                    break;
+            }
             return;
         }
 
         String verdict = extractString(response.body(), "verdict");
-        Integer score = extractNumber(response.body(), "score");
+        String action = extractString(response.body(), "action");
+        Integer executionTimeMs = extractNumber(response.body(), "executionTimeMs");
+        String environment = extractString(response.body(), "environment");
         Boolean cached = extractBoolean(response.body(), "cached");
-        Boolean partial = extractBoolean(response.body(), "partial");
         String requestId = extractString(response.body(), "requestId");
 
-        System.out.println("verdict=" + verdict + " score=" + score + " cached=" + cached
-                + " partial=" + partial + " requestId=" + requestId);
+        System.out.println("verdict=" + verdict + " action=" + action + " executionTimeMs=" + executionTimeMs
+                + " environment=" + environment + " cached=" + cached + " requestId=" + requestId);
+        if ("sandbox".equals(environment)) {
+            System.out.println("(sandbox key: results are for integration testing only)");
+        }
 
-        switch (verdict) {
-            case "malicious":
-                System.out.println("BLOCK: do not open " + target);
+        // Branch on action, not verdict. Anything unexpected is treated as "don't open".
+        switch (String.valueOf(action)) {
+            case "allow":
+                System.out.println("ALLOW: safe to open " + target);
                 break;
-            case "suspicious":
+            case "warn":
                 System.out.println("WARN: confirm with the user before opening " + target);
                 break;
-            case "not_malicious":
-                System.out.println("PROCEED: safe to open " + target);
+            default:
+                System.out.println("BLOCK: do not open " + target);
                 break;
         }
     }

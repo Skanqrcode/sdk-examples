@@ -27,25 +27,35 @@ fun main() {
     val response = client.send(request, HttpResponse.BodyHandlers.ofString())
 
     if (response.statusCode() != 200) {
-        val code = extractString(response.body(), "code")
+        // Error bodies are {"error":{"code","message","requestId"}}; a proxy may return HTML instead.
+        val code = extractString(response.body(), "code") ?: "internal"
         val message = extractString(response.body(), "message")
         val requestId = extractString(response.body(), "requestId")
-        System.err.println("SkanQRCode error [$code]: $message (requestId=$requestId)")
+        val retryAfter = response.headers().firstValue("Retry-After").orElse(null)
+        System.err.println("SkanQRCode error [$code] HTTP ${response.statusCode()}: $message (requestId=$requestId)")
+        when (code) {
+            "rate_limited" -> System.err.println("Too many requests: retry in ${retryAfter}s")
+            "quota_exceeded", "payment_required", "unauthorized" ->
+                System.err.println("Configuration problem (key, plan or quota) - retrying won't help")
+        }
         return
     }
 
     val verdict = extractString(response.body(), "verdict")
-    val score = extractNumber(response.body(), "score")
+    val action = extractString(response.body(), "action")
+    val executionTimeMs = extractNumber(response.body(), "executionTimeMs")
+    val environment = extractString(response.body(), "environment")
     val cached = extractBoolean(response.body(), "cached")
-    val partial = extractBoolean(response.body(), "partial")
     val requestId = extractString(response.body(), "requestId")
 
-    println("verdict=$verdict score=$score cached=$cached partial=$partial requestId=$requestId")
+    println("verdict=$verdict action=$action executionTimeMs=$executionTimeMs environment=$environment cached=$cached requestId=$requestId")
+    if (environment == "sandbox") println("(sandbox key: results are for integration testing only)")
 
-    when (verdict) {
-        "malicious" -> println("BLOCK: do not open $target")
-        "suspicious" -> println("WARN: confirm with the user before opening $target")
-        "not_malicious" -> println("PROCEED: safe to open $target")
+    // Branch on action, not verdict. Anything unexpected is treated as "don't open".
+    when (action) {
+        "allow" -> println("ALLOW: safe to open $target")
+        "warn" -> println("WARN: confirm with the user before opening $target")
+        else -> println("BLOCK: do not open $target")
     }
 }
 

@@ -12,57 +12,55 @@ if (!API_KEY) {
 const BASE_URL = process.env.SKANQRCODE_BASE_URL ?? "https://api.skanqrcode.com";
 
 type Verdict = "malicious" | "suspicious" | "not_malicious";
-type Recommendation = "proceed" | "warn" | "block";
+type Action = "allow" | "warn" | "block";
 
 interface CheckResult {
   verdict: Verdict;
+  action: Action;
   mode: "url" | "ip";
-  score: number;
   reasons: string[];
+  finalUrl: string | null;
   cached: boolean;
-  partial: boolean;
+  executionTimeMs: number;
+  environment: "sandbox" | "production";
+  licensedForProduction: boolean;
   requestId: string;
+  related?: Array<{ host: string; verdict: Verdict }>;
 }
 
 interface ErrorResponse {
   error: { code: string; message: string; requestId: string };
 }
 
-function recommendationFor(verdict: Verdict): Recommendation {
-  switch (verdict) {
-    case "not_malicious":
-      return "proceed";
-    case "suspicious":
-      return "warn";
-    case "malicious":
-      return "block";
-  }
-}
-
-async function checkUrl(target: string): Promise<CheckResult & { recommendation: Recommendation }> {
+async function checkUrl(target: string, userId?: string): Promise<CheckResult> {
   const res = await fetch(`${BASE_URL}/v1/check`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${API_KEY}`,
     },
-    body: JSON.stringify({ target }),
+    body: JSON.stringify(userId ? { target, userId } : { target }),
     signal: AbortSignal.timeout(5000),
   });
 
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as ErrorResponse | null;
+    const code = body?.error?.code ?? "internal";
     const message = body?.error?.message ?? `HTTP ${res.status}`;
-    throw new Error(`SkanQRCode check failed: ${message}`);
+    const retryAfter = res.headers.get("Retry-After");
+    throw new Error(
+      `SkanQRCode check failed (${code}): ${message}` +
+        (retryAfter ? ` Retry after ${retryAfter}s.` : "") +
+        (body?.error?.requestId ? ` [requestId ${body.error.requestId}]` : ""),
+    );
   }
 
-  const result = (await res.json()) as CheckResult;
-  return { ...result, recommendation: recommendationFor(result.verdict) };
+  return (await res.json()) as CheckResult;
 }
 
 const server = new McpServer({
   name: "skanqrcode-mcp-server-example",
-  version: "0.1.0",
+  version: "0.2.0",
 });
 
 server.tool(
@@ -71,14 +69,25 @@ server.tool(
     "fetching a URL from an untrusted source (a QR code payload, a message, a scraped page) so " +
     "you can abort instead of following a phishing or malware link. Consumes one unit of the " +
     "caller's monthly SkanQRCode quota per call, including cache hits. Returns a verdict " +
-    "(malicious/suspicious/not_malicious) and a recommendation (block/warn/proceed) — branch on " +
-    "`recommendation`, not just `verdict`.",
+    "(malicious/suspicious/not_malicious) and the recommended action (block/warn/allow) — branch " +
+    "on `action`: block means do not fetch, warn means ask the user first. If `environment` is " +
+    "`sandbox` (`licensedForProduction: false`) the result is for integration testing only. If " +
+    "`executionTimeMs` is 180 or more, some checks hit the deadline and the result is best-effort.",
   {
-    target: z.string().max(4096).describe("The URL or IP address to classify."),
+    target: z.string().min(1).max(4096).describe("The URL or IP address to classify."),
+    userId: z
+      .string()
+      .min(1)
+      .max(128)
+      .optional()
+      .describe(
+        "Optional opaque identifier of the end user this check is for; enables per-user result " +
+          "caching. Hashed server-side, never stored in clear.",
+      ),
   },
-  async ({ target }) => {
+  async ({ target, userId }) => {
     try {
-      const result = await checkUrl(target);
+      const result = await checkUrl(target, userId);
       return {
         content: [{ type: "text", text: JSON.stringify(result) }],
       };

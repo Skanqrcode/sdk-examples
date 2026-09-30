@@ -4,7 +4,7 @@
       "command": "npx",
       "args": ["-y", "@skanqrcode/mcp-server-example"],
       "env": {
-        "SKANQRCODE_API_KEY": "lure_test_..."
+        "SKANQRCODE_API_KEY": "sk_test_..."
       }
     }
   }

@@ -26,9 +26,10 @@ import com.google.mlkit.vision.barcode.BarcodeScanning;
 import com.google.mlkit.vision.barcode.common.Barcode;
 import com.google.mlkit.vision.common.InputImage;
 // SkanQRCodeClient here is the OkHttp-based Android build of the SDK — same public API
-// (checkUrl, CheckResult/Verdict/Recommendation) as sdk/java. See this module's README.
+// (checkUrl, CheckResult/Action/ErrorCode) as sdk/java. See this module's README.
+import com.skanqrcode.sdk.Action;
 import com.skanqrcode.sdk.CheckResult;
-import com.skanqrcode.sdk.Recommendation;
+import com.skanqrcode.sdk.ErrorCode;
 import com.skanqrcode.sdk.SkanQRCodeClient;
 import com.skanqrcode.sdk.SkanQRCodeException;
 
@@ -126,7 +127,8 @@ public class ScannerActivity extends AppCompatActivity {
                 CheckResult result = client.checkUrl(target);
                 runOnUiThread(() -> onResult(target, result));
             } catch (SkanQRCodeException e) {
-                runOnUiThread(() -> onError(e.getCode() + ": " + e.getMessage()));
+                // Every error path fails closed: nothing is opened, the user re-scans.
+                runOnUiThread(() -> onError(describe(e)));
             } catch (Exception e) {
                 // Fail closed: a timeout or dropped connection must not fall through to
                 // "safe to open" — surface an error and make the user re-scan instead.
@@ -137,16 +139,17 @@ public class ScannerActivity extends AppCompatActivity {
 
     private void onResult(String target, CheckResult result) {
         progressBar.setVisibility(View.GONE);
-        Recommendation recommendation = result.getRecommendation();
+        // Branch on the server-provided action, not the verdict.
+        Action action = result.getAction();
         String reasons = String.join(", ", result.getReasons());
 
-        if (recommendation == Recommendation.PROCEED) {
+        if (action == Action.ALLOW) {
             openUrl(target);
             handlingScan.set(false);
             return;
         }
 
-        if (recommendation == Recommendation.WARN) {
+        if (action == Action.WARN) {
             new AlertDialog.Builder(this)
                     .setTitle("This link looks suspicious")
                     .setMessage(target + "\n\nReasons: " + reasons)
@@ -160,13 +163,34 @@ public class ScannerActivity extends AppCompatActivity {
             return;
         }
 
-        // BLOCK — no proceed option.
+        // BLOCK (and anything unexpected) — no proceed option.
         new AlertDialog.Builder(this)
                 .setTitle("This link is unsafe")
                 .setMessage(target + "\n\nReasons: " + reasons + "\n\nSkanQRCode blocked this link.")
                 .setPositiveButton("OK", (dialog, which) -> handlingScan.set(false))
                 .setCancelable(false)
                 .show();
+    }
+
+    private String describe(SkanQRCodeException e) {
+        switch (e.getCode()) {
+            case ErrorCode.RATE_LIMITED:
+                Integer seconds = e.getRetryAfter();
+                return seconds != null
+                        ? "Too many scans. Try again in " + seconds + " seconds."
+                        : "Too many scans. Try again shortly.";
+            case ErrorCode.QUOTA_EXCEEDED:
+            case ErrorCode.PAYMENT_REQUIRED:
+            case ErrorCode.UNAUTHORIZED:
+            case ErrorCode.FORBIDDEN:
+                // Not something the user can fix by re-scanning — a key, plan or quota problem.
+                return "Link checking isn't available because of a configuration problem. "
+                        + "Contact the app owner. (" + e.getCode() + ", requestId=" + e.getRequestId() + ")";
+            case ErrorCode.AUTH_UNAVAILABLE:
+                return "The link checker is briefly unavailable. Try again in a moment.";
+            default:
+                return e.getCode() + ": " + e.getMessage() + " (requestId=" + e.getRequestId() + ")";
+        }
     }
 
     private void onError(String message) {

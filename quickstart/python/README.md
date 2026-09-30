@@ -6,7 +6,7 @@ standard library (`urllib.request`, `json`).
 ## Run
 
 ```
-export SKANQRCODE_API_KEY=lure_test_...
+export SKANQRCODE_API_KEY=sk_test_...
 python3 quickstart.py "https://example.com/login"
 ```
 

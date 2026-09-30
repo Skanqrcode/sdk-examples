@@ -1,6 +1,6 @@
 {
   "name": "@skanqrcode/mcp-server-example",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Reference MCP server exposing SkanQRCode's check_url tool over stdio. Example code, not the official @skanqrcode/mcp-server package.",
   "type": "module",
   "bin": {

@@ -15,10 +15,11 @@ import {
   useCameraPermission,
   useCodeScanner,
 } from 'react-native-vision-camera';
-import { SkanQRCodeClient, shouldBlock } from 'skanqrcode';
+import { SkanQRCodeClient } from 'skanqrcode';
 
 // In a real app, inject this at build time (e.g. react-native-dotenv, EAS secrets) —
-// never hardcode a production key in the bundle.
+// never hardcode a production key in the bundle. sk_test_ keys are sandbox (results come back
+// with environment "sandbox"); sk_live_ keys are production.
 const client = new SkanQRCodeClient({ apiKey: process.env.SKANQRCODE_API_KEY });
 
 export default function ScannerScreen() {
@@ -70,13 +71,15 @@ export default function ScannerScreen() {
 
       setChecking(false);
 
-      if (result.verdict === 'not_malicious') {
+      // Branch on `action` (allow / warn / block). Anything unexpected is treated as a warn,
+      // never as an allow.
+      if (result.action === 'allow') {
         Linking.openURL(target);
         resumeScanning();
         return;
       }
 
-      if (shouldBlock(result)) {
+      if (result.action === 'block') {
         Alert.alert(
           'Blocked: this link looks malicious',
           `Reasons: ${result.reasons.join(', ') || 'none reported'}`,
@@ -85,7 +88,7 @@ export default function ScannerScreen() {
         return;
       }
 
-      // suspicious: warn, don't auto-open, don't hard-block either.
+      // warn: don't auto-open, don't hard-block either.
       setPendingWarning({ target, result });
     },
     [resumeScanning],

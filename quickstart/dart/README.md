@@ -6,7 +6,7 @@ See [`../../docs/api-contract.md`](../../docs/api-contract.md) for the full cont
 ## Run
 
 ```sh
-export SKANQRCODE_API_KEY=lure_test_...
+export SKANQRCODE_API_KEY=sk_test_...
 dart pub get
 dart run quickstart.dart
 ```

@@ -5,7 +5,7 @@ Raw usage of `POST /v1/check` with `reqwest` and `serde` — no SDK.
 ## Run
 
 ```sh
-export SKANQRCODE_API_KEY=lure_test_...
+export SKANQRCODE_API_KEY=sk_test_...
 cargo run -- "https://example.com/login"
 ```
 

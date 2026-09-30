@@ -5,7 +5,7 @@ Raw usage of `POST /v1/check` using only the Go standard library — no SDK, no 
 ## Run
 
 ```sh
-export SKANQRCODE_API_KEY=lure_test_...
+export SKANQRCODE_API_KEY=sk_test_...
 go run main.go "https://example.com/login"
 ```
 

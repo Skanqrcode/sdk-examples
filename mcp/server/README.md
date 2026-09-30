@@ -12,7 +12,7 @@ This is example code, not the official `@skanqrcode/mcp-server` package advertis
 ```bash
 npm install
 npm run build
-SKANQRCODE_API_KEY=lure_test_... npm start
+SKANQRCODE_API_KEY=sk_test_... npm start
 ```
 
 ## Wire it into an MCP client
@@ -23,7 +23,7 @@ SKANQRCODE_API_KEY=lure_test_... npm start
     "skanqrcode": {
       "command": "node",
       "args": ["/absolute/path/to/mcp/server/dist/index.js"],
-      "env": { "SKANQRCODE_API_KEY": "lure_test_..." }
+      "env": { "SKANQRCODE_API_KEY": "sk_test_..." }
     }
   }
 }

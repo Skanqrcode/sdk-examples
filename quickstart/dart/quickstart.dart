@@ -28,34 +28,51 @@ Future<void> main() async {
       )
       .timeout(const Duration(seconds: 5));
 
-  final body = jsonDecode(response.body) as Map<String, dynamic>;
+  // A proxy's HTML 502 isn't the documented JSON, so only decode what we need.
+  Map<String, dynamic>? body;
+  try {
+    body = jsonDecode(response.body) as Map<String, dynamic>;
+  } catch (_) {}
 
-  if (response.statusCode != 200) {
-    final error = body['error'] as Map<String, dynamic>;
+  if (response.statusCode != 200 || body == null) {
+    final error = body?['error'] as Map<String, dynamic>?;
+    final code = error?['code'] ?? 'internal';
     stderr.writeln(
-      'Check failed [${error['code']}]: ${error['message']} '
-      '(requestId: ${error['requestId']})',
+      'Check failed [${response.statusCode} $code]: '
+      '${error?['message'] ?? 'unexpected response'} '
+      '(requestId: ${error?['requestId'] ?? 'none'})',
     );
+    switch (code) {
+      case 'rate_limited':
+        stderr.writeln('Retry in ${response.headers['retry-after']}s.');
+      case 'unauthorized' || 'payment_required' || 'quota_exceeded':
+        stderr.writeln('Not retryable: check your API key, billing status or monthly quota.');
+      case 'auth_unavailable' || 'internal':
+        stderr.writeln('Retryable: try again shortly, with backoff.');
+    }
     exit(1);
   }
 
-  final verdict = body['verdict'] as String;
-  final score = body['score'] as int;
+  final action = body['action'] as String;
   final reasons = (body['reasons'] as List).cast<String>();
 
   print('target:    $target');
-  print('verdict:   $verdict');
-  print('score:     $score');
+  print('verdict:   ${body['verdict']}');
+  print('action:    $action');
   print('reasons:   ${reasons.join(', ')}');
   print('cached:    ${body['cached']}');
-  print('partial:   ${body['partial']}');
+  print('time:      ${body['executionTimeMs']} ms');
+  print('env:       ${body['environment']}');
   print('requestId: ${body['requestId']}');
 
-  if (verdict == 'malicious') {
-    print('\n=> Block: do not open this link.');
-  } else if (verdict == 'suspicious') {
-    print('\n=> Warn: confirm with the user before opening.');
-  } else {
-    print('\n=> Proceed: safe to open.');
+  switch (action) {
+    case 'block':
+      print('\n=> Block: do not open this link.');
+    case 'warn':
+      print('\n=> Warn: confirm with the user before opening.');
+    case 'allow':
+      print('\n=> Allow: safe to open.');
+    default:
+      print('\n=> Unrecognized action: treat like warn.');
   }
 }

@@ -1,15 +1,41 @@
 from .client import AsyncSkanQRCodeClient, SkanQRCodeClient
-from .exceptions import SkanQRCodeError
-from .models import CheckResult, Mode, Recommendation, UsageHour, UsageResponse, Verdict
+from .exceptions import ErrorCode, SkanQRCodeError
+from .models import (
+    Action,
+    CheckResult,
+    Environment,
+    Health,
+    HourlyUsageResponse,
+    ListEntry,
+    ListPage,
+    MatchType,
+    Mode,
+    PlanId,
+    RelatedHost,
+    SessionUrl,
+    UsageHour,
+    UsageResponse,
+    Verdict,
+)
 
 __all__ = [
     "SkanQRCodeClient",
     "AsyncSkanQRCodeClient",
     "SkanQRCodeError",
+    "ErrorCode",
     "CheckResult",
-    "UsageHour",
+    "RelatedHost",
     "UsageResponse",
+    "UsageHour",
+    "HourlyUsageResponse",
+    "ListEntry",
+    "ListPage",
+    "SessionUrl",
+    "Health",
     "Verdict",
+    "Action",
     "Mode",
-    "Recommendation",
+    "Environment",
+    "MatchType",
+    "PlanId",
 ]

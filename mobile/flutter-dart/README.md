@@ -16,7 +16,7 @@ dependencies:
   mobile_scanner: ^5.0.0
   url_launcher: ^6.3.0
   skanqrcode:
-    path: ../sdk-examples/sdk/dart # or: skanqrcode: ^0.1.0, once published
+    path: ../sdk-examples/sdk/dart # or: skanqrcode: ^0.2.0, once published
 ```
 
 Camera permissions: follow `mobile_scanner`'s [installation guide](https://pub.dev/packages/mobile_scanner#installation)
@@ -25,13 +25,25 @@ for the `NSCameraUsageDescription` (iOS) and `<uses-permission android:name="and
 Run with the API key baked in at build time:
 
 ```sh
-flutter run --dart-define=SKANQRCODE_API_KEY=lure_live_...
+flutter run --dart-define=SKANQRCODE_API_KEY=sk_live_...
 ```
 
 ## Behavior
 
-- **proceed** (`not_malicious`) — opens the link immediately.
+The screen branches on the server's `action`:
+
+- **allow** (`not_malicious`) — opens the link immediately.
 - **warn** (`suspicious`) — shows the matched reason codes with "Open anyway" / "Cancel".
 - **block** (`malicious`) — shows the reason codes with no way to proceed.
-- A network error or timeout is treated as a block (fail closed) — see the comment in
-  `scanner_screen.dart` for the reasoning.
+- An error, a network failure or a timeout is treated as a block (fail closed) — see the
+  comment in `scanner_screen.dart` for the reasoning. Error codes map to a message:
+  `rate_limited` says to try again in N seconds (from `Retry-After`); `quota_exceeded`,
+  `payment_required`, `unauthorized` and `forbidden` are reported as a configuration problem
+  (rescanning won't help); anything else, including an unrecognized `action`, gets a generic
+  "couldn't verify" message.
+
+`scanner_screen.dart` imports Flutter with `hide Action` because the SDK's `Action` enum
+clashes with Flutter's `Action` class.
+
+An `sk_test_` key is sandbox-only: results carry `environment == Environment.sandbox` and
+`licensedForProduction == false` and are for integration testing, not production enforcement.

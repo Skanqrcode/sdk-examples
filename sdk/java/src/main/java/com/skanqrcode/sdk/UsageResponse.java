@@ -1,33 +1,40 @@
 package com.skanqrcode.sdk;
 
-import java.util.List;
-
 public final class UsageResponse {
     private final String tenantId;
-    private final String from;
-    private final String to;
-    private final List<UsageHour> hours;
+    private final String month;
+    private final int monthlyQuota;
+    private final int totalRequests;
+    private final int availableRequests;
 
-    public UsageResponse(String tenantId, String from, String to, List<UsageHour> hours) {
+    public UsageResponse(String tenantId, String month, int monthlyQuota, int totalRequests,
+                          int availableRequests) {
         this.tenantId = tenantId;
-        this.from = from;
-        this.to = to;
-        this.hours = hours;
+        this.month = month;
+        this.monthlyQuota = monthlyQuota;
+        this.totalRequests = totalRequests;
+        this.availableRequests = availableRequests;
     }
 
     public String getTenantId() {
         return tenantId;
     }
 
-    public String getFrom() {
-        return from;
+    /** The UTC calendar month covered, as YYYY-MM. */
+    public String getMonth() {
+        return month;
     }
 
-    public String getTo() {
-        return to;
+    public int getMonthlyQuota() {
+        return monthlyQuota;
     }
 
-    public List<UsageHour> getHours() {
-        return hours;
+    public int getTotalRequests() {
+        return totalRequests;
+    }
+
+    /** max(monthlyQuota - totalRequests, 0). Figures can lag real time by up to about an hour. */
+    public int getAvailableRequests() {
+        return availableRequests;
     }
 }

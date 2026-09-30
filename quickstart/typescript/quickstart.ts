@@ -6,15 +6,19 @@
 const BASE_URL = "https://api.skanqrcode.com";
 
 type Verdict = "malicious" | "suspicious" | "not_malicious";
+type Action = "allow" | "warn" | "block";
 type Mode = "url" | "ip";
 
 interface CheckResult {
   verdict: Verdict;
+  action: Action;
   mode: Mode;
-  score: number;
   reasons: string[];
+  finalUrl: string | null;
   cached: boolean;
-  partial: boolean;
+  executionTimeMs: number;
+  environment: "sandbox" | "production";
+  licensedForProduction: boolean;
   requestId: string;
 }
 
@@ -38,10 +42,15 @@ async function checkUrl(target: string, apiKey: string): Promise<CheckResult> {
   });
 
   if (!response.ok) {
-    const body = (await response.json()) as ApiError;
-    throw new Error(
-      `SkanQRCode error ${response.status} (${body.error.code}): ${body.error.message} [requestId=${body.error.requestId}]`,
-    );
+    // The body may not be the documented JSON (e.g. a proxy's HTML 502) — don't crash on it.
+    const body = (await response.json().catch(() => undefined)) as ApiError | undefined;
+    const code = body?.error.code ?? "internal";
+    let message = `SkanQRCode error ${response.status} (${code}): ${body?.error.message ?? "unexpected response"}`;
+    if (body) message += ` [requestId=${body.error.requestId}]`;
+    // rate_limited: retry after Retry-After seconds. quota_exceeded: don't retry.
+    const retryAfter = response.headers.get("Retry-After");
+    if (code === "rate_limited" && retryAfter) message += ` (retry in ${retryAfter}s)`;
+    throw new Error(message);
   }
 
   return (await response.json()) as CheckResult;
@@ -60,20 +69,29 @@ async function main() {
   console.log(`target:     ${target}`);
   console.log(`verdict:    ${result.verdict}`);
   console.log(`mode:       ${result.mode}`);
-  console.log(`score:      ${result.score}`);
+  console.log(`action:     ${result.action}`);
   console.log(`reasons:    ${result.reasons.join(", ") || "(none)"}`);
   console.log(`cached:     ${result.cached}`);
-  console.log(`partial:    ${result.partial}`);
+  console.log(`time:       ${result.executionTimeMs} ms`);
+  console.log(`env:        ${result.environment}`);
   console.log(`requestId:  ${result.requestId}`);
 
-  // Not malicious -> safe to proceed. Suspicious -> warn but don't hard-block.
-  // Malicious -> block. See docs/api-contract.md "Suggested client behavior".
-  if (result.verdict === "malicious") {
+  // Branch on `action`: allow -> proceed, warn -> tell the user, block -> stop.
+  // See docs/api-contract.md "Suggested client behavior".
+  if (result.action === "block") {
     console.log("\nDecision: BLOCK");
-  } else if (result.verdict === "suspicious") {
+  } else if (result.action === "warn") {
     console.log("\nDecision: WARN");
   } else {
     console.log("\nDecision: PROCEED");
+  }
+
+  // executionTimeMs >= 180 means the evaluation deadline was hit: best-effort result.
+  if (result.executionTimeMs >= 180) {
+    console.log("Note: evaluation deadline hit; result is best-effort.");
+  }
+  if (!result.licensedForProduction) {
+    console.log("Note: sandbox key — integration testing only, don't enforce on this in production.");
   }
 }
 

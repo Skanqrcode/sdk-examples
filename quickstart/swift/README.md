@@ -13,10 +13,9 @@ API contract.
 ## Run
 
 ```sh
-export SKANQRCODE_API_KEY=lure_test_...
+export SKANQRCODE_API_KEY=sk_test_...
 swift main.swift                          # checks a built-in example URL
 swift main.swift "https://example.com"    # or pass your own target
 ```
 
-The script exits `0` for `not_malicious`/`suspicious`, `2` for `malicious`, and `1` on
-request/API errors.
+The script exits `0` for `allow`/`warn`, `2` for `block`, and `1` on request/API errors.

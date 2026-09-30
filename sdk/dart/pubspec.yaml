@@ -2,7 +2,7 @@ name: skanqrcode
 description: >-
   Dart client for the SkanQRCode API — real-time URL/QR-code safety checks
   (malicious/suspicious/not_malicious) in under 200ms.
-version: 0.1.0
+version: 0.2.0
 publish_to: none
 
 environment:

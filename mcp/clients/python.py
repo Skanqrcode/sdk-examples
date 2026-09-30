@@ -3,7 +3,7 @@
 # see ../server/README.md.
 #
 #   pip install mcp
-#   SKANQRCODE_API_KEY=lure_test_... python3 python.py "https://example.com/login"
+#   SKANQRCODE_API_KEY=sk_test_... python3 python.py "https://example.com/login"
 
 import asyncio
 import json
@@ -38,7 +38,7 @@ def main() -> None:
     verdict = asyncio.run(check_url(target))
     print(verdict)
 
-    if verdict["recommendation"] == "block":
+    if verdict["action"] == "block":
         print(f"Refusing to fetch {target}: {', '.join(verdict['reasons'])}", file=sys.stderr)
         sys.exit(1)
 

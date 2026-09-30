@@ -33,9 +33,10 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 // SkanQRCodeClient here is the OkHttp-based Android build of the SDK — same public API
-// (checkUrl, CheckResult/Verdict/Recommendation) as sdk/kotlin. See this module's README.
+// (checkUrl, CheckResult/Action/ErrorCode) as sdk/kotlin. See this module's README.
+import com.skanqrcode.sdk.Action
 import com.skanqrcode.sdk.CheckResult
-import com.skanqrcode.sdk.Recommendation
+import com.skanqrcode.sdk.ErrorCode
 import com.skanqrcode.sdk.SkanQRCodeClient
 import com.skanqrcode.sdk.SkanQRCodeException
 import kotlinx.coroutines.launch
@@ -79,7 +80,8 @@ private fun ScannerScreen(client: SkanQRCodeClient, onOpen: (String) -> Unit) {
             state = try {
                 ScanState.Decided(target, client.checkUrl(target))
             } catch (e: SkanQRCodeException) {
-                ScanState.Failed("${e.code}: ${e.message}")
+                // Every error path fails closed: nothing is opened, the user re-scans.
+                ScanState.Failed(describe(e))
             } catch (e: Exception) {
                 // Fail closed: a timeout or dropped connection must not fall through to
                 // "safe to open" — surface an error and make the user re-scan instead.
@@ -159,6 +161,17 @@ private fun ScannerScreen(client: SkanQRCodeClient, onOpen: (String) -> Unit) {
     }
 }
 
+private fun describe(e: SkanQRCodeException): String = when (e.code) {
+    ErrorCode.RATE_LIMITED ->
+        e.retryAfter?.let { "Too many scans. Try again in $it seconds." } ?: "Too many scans. Try again shortly."
+    // Not something the user can fix by re-scanning — a key, plan or quota problem.
+    ErrorCode.QUOTA_EXCEEDED, ErrorCode.PAYMENT_REQUIRED, ErrorCode.UNAUTHORIZED, ErrorCode.FORBIDDEN ->
+        "Link checking isn't available because of a configuration problem. " +
+            "Contact the app owner. (${e.code}, requestId=${e.requestId})"
+    ErrorCode.AUTH_UNAVAILABLE -> "The link checker is briefly unavailable. Try again in a moment."
+    else -> "${e.code}: ${e.message} (requestId=${e.requestId})"
+}
+
 @Composable
 private fun DecisionDialog(
     target: String,
@@ -166,16 +179,17 @@ private fun DecisionDialog(
     onDismiss: () -> Unit,
     onOpen: () -> Unit,
 ) {
-    when (result.recommendation) {
-        Recommendation.PROCEED -> LaunchedEffect(target) { onOpen() } // no dialog, launch immediately
-        Recommendation.WARN -> AlertDialog(
+    // Branch on the server-provided action, not the verdict.
+    when (result.action) {
+        Action.ALLOW -> LaunchedEffect(target) { onOpen() } // no dialog, launch immediately
+        Action.WARN -> AlertDialog(
             onDismissRequest = onDismiss,
             title = { Text("This link looks suspicious") },
             text = { Text("$target\n\nReasons: ${result.reasons.joinToString()}") },
             confirmButton = { TextButton(onClick = onOpen) { Text("Open anyway") } },
             dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
         )
-        Recommendation.BLOCK -> AlertDialog(
+        Action.BLOCK -> AlertDialog(
             onDismissRequest = onDismiss,
             title = { Text("This link is unsafe") },
             text = { Text("$target\n\nReasons: ${result.reasons.joinToString()}\n\nSkanQRCode blocked this link.") },

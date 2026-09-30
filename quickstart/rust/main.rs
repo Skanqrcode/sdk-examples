@@ -12,11 +12,13 @@ struct CheckRequest<'a> {
 #[derive(Debug, Deserialize)]
 struct CheckResponse {
     verdict: String,
+    action: String,
     mode: String,
-    score: u8,
     reasons: Vec<String>,
     cached: bool,
-    partial: bool,
+    #[serde(rename = "executionTimeMs")]
+    execution_time_ms: u64,
+    environment: String,
     #[serde(rename = "requestId")]
     request_id: String,
 }
@@ -31,7 +33,7 @@ struct ErrorDetail {
     code: String,
     message: String,
     #[serde(rename = "requestId")]
-    request_id: String,
+    request_id: Option<String>,
 }
 
 #[tokio::main]
@@ -55,32 +57,56 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     let status = response.status();
+    let retry_after = response
+        .headers()
+        .get("retry-after")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_string);
     let body = response.text().await?;
 
     if !status.is_success() {
-        let err: ErrorBody = serde_json::from_str(&body)
-            .unwrap_or_else(|_| panic!("http {status}: {body}"));
-        eprintln!(
-            "{}: {} (requestId={})",
-            err.error.code, err.error.message, err.error.request_id
-        );
+        match serde_json::from_str::<ErrorBody>(&body) {
+            Ok(err) => {
+                eprintln!(
+                    "{}: {} (http {status}, requestId={})",
+                    err.error.code,
+                    err.error.message,
+                    err.error.request_id.unwrap_or_default()
+                );
+                match err.error.code.as_str() {
+                    "rate_limited" => {
+                        eprintln!("retry in {}s", retry_after.unwrap_or_else(|| "?".into()))
+                    }
+                    "quota_exceeded" => {
+                        eprintln!("monthly quota exhausted; retrying won't help")
+                    }
+                    _ => {}
+                }
+            }
+            // Not the documented JSON (e.g. an HTML 502 from a proxy).
+            Err(_) => eprintln!("internal: http {status}: {body}"),
+        }
         std::process::exit(1);
     }
 
     let result: CheckResponse = serde_json::from_str(&body)?;
 
-    println!("verdict:    {}", result.verdict);
-    println!("mode:       {}", result.mode);
-    println!("score:      {}", result.score);
-    println!("reasons:    {:?}", result.reasons);
-    println!("cached:     {}", result.cached);
-    println!("partial:    {}", result.partial);
-    println!("requestId:  {}", result.request_id);
+    println!("verdict:         {}", result.verdict);
+    println!("action:          {}", result.action);
+    println!("mode:            {}", result.mode);
+    println!("reasons:         {:?}", result.reasons);
+    println!("cached:          {}", result.cached);
+    println!("executionTimeMs: {}", result.execution_time_ms);
+    println!("environment:     {}", result.environment);
+    println!("requestId:       {}", result.request_id);
 
-    match result.verdict.as_str() {
-        "malicious" => println!("\nBLOCK: do not open this link."),
-        "suspicious" => println!("\nWARN: proceed with caution."),
+    match result.action.as_str() {
+        "block" => println!("\nBLOCK: do not open this link."),
+        "warn" => println!("\nWARN: proceed with caution."),
         _ => {}
+    }
+    if result.environment == "sandbox" {
+        println!("(sandbox key: results are for integration testing only)");
     }
 
     Ok(())

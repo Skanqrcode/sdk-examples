@@ -28,10 +28,15 @@ import ScannerScreen from './ScannerScreen';
 Set `SKANQRCODE_API_KEY` via your usual RN env mechanism (e.g. `react-native-dotenv`, EAS
 secrets) — see the comment in `ScannerScreen.jsx` for where it's read.
 
-## Verdict handling
+## Action handling
 
-- `not_malicious` — opens the link immediately.
-- `suspicious` — shows a modal with "Open anyway" / "Cancel".
-- `malicious` — shows a hard-block alert with the reason codes; no way to proceed.
-- Network/timeout error — fails closed: never auto-opens, prompts the user to decide instead
-  of silently treating an unknown result as safe.
+The screen branches on the `action` field of the `/v1/check` response:
+
+- `allow` — opens the link immediately.
+- `warn` — shows a modal with "Open anyway" / "Cancel".
+- `block` — shows a hard-block alert with the reason codes; no way to proceed.
+- Network/timeout/API error — fails closed: never auto-opens, prompts the user to decide
+  instead of silently treating an unknown result as safe.
+
+Use an `sk_test_` key (sandbox) while integrating and an `sk_live_` key in production.
+Sandbox results come back with `licensedForProduction: false`; treat them as test output only.

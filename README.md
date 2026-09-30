@@ -6,12 +6,9 @@ real-time URL/QR-code safety API — POST a URL or IP to `/v1/check` and get bac
 this link" decisions right after scanning a QR code or following an inbound link.
 
 **Start here:** [`docs/api-contract.md`](docs/api-contract.md) — the exact request/response
-contract every example in this repo follows, and why it doesn't match the copy on
-[skanqrcode.com](https://skanqrcode.com) and [skanqrcode.com/mcp](https://skanqrcode.com/mcp)
-word for word (short version: the marketing pages describe a `{content}`/`{action}` shape and
-an already-published MCP server; the only implemented, reviewed contract is
-`skanqrcode-api/docs/openapi.yaml`, which uses `{target}`/`{verdict, mode, score, ...}` — these
-examples follow that one).
+contract every example in this repo follows. It mirrors the published OpenAPI spec (v1.7.0) at
+[docs.skanqrcode.com/openapi.json](https://docs.skanqrcode.com/openapi.json); when that spec
+changes, update the contract doc first, then the SDKs.
 
 ## Layout
 
@@ -38,12 +35,26 @@ mcp/                      MCP server + client examples for agent/LLM tool-callin
 | Rust | [`quickstart/rust`](quickstart/rust) | [`sdk/rust`](sdk/rust) — crate `skanqrcode` | — |
 
 Every SDK exposes the same shape adapted to its language's conventions: a `SkanQRCodeClient`
-(or `Client`) constructed with an API key, `checkUrl`/`CheckURL`/`check_url` returning a typed
-`CheckResult`, `getUsage`/`GetUsage`/`get_usage` for the usage-aggregates endpoint, a typed
-error carrying `code`/`message`/`requestId`, and a `recommendation` (`proceed`/`warn`/`block`)
-derived from `verdict` so callers don't have to switch on the raw enum themselves. Every mobile
-example scans a QR code with the platform's standard local decoder, calls `checkUrl` before
-opening the link, and fails closed (doesn't auto-open) on a network error or timeout.
+(or `Client`) constructed with an API key, plus one method per API operation:
+
+| Operation | Method (`checkUrl` / `CheckURL` / `check_url` style) |
+|---|---|
+| `POST /v1/check` | `checkUrl(target, userId?)` → `CheckResult` with `verdict`, the recommended `action` (`allow`/`warn`/`block`), `reasons`, `executionTimeMs`, `environment`, … |
+| `GET /v1/usage` | `getUsage(month?)` → monthly quota, requests used, requests available |
+| `GET /v1/usage/hourly` | `getUsageHourly(month?)` → per-hour usage with rate-limit utilization |
+| `/v1/allow-list`, `/v1/block-list` | `list…`, `add…Entry`, `delete…Entry` (writes need an `admin`-scope key; the allow list is Pro/Business only) |
+| `/v1/billing/checkout`, `/v1/billing/portal` | `createCheckoutSession`, `createPortalSession` — return a URL to hand to a person |
+| `GET /health` | `getHealth()` |
+
+Errors are typed and carry `code`/`message`/`requestId`, the HTTP status and, for a 429,
+`retryAfter` seconds. A `shouldBlock`/`isSafe`-style helper is built on `action` so callers
+don't have to switch on the raw enum themselves. The billing webhook isn't exposed — it isn't
+for API clients. Every mobile example scans a QR code with the platform's standard local
+decoder, calls `checkUrl` before opening the link, and fails closed (doesn't auto-open) on a
+network error or timeout.
+
+API keys are `sk_live_…` (paid plans) or `sk_test_…` (free sandbox plan); the examples read
+theirs from `SKANQRCODE_API_KEY`. Results from a sandbox key are for integration testing only.
 
 ## MCP
 
@@ -56,5 +67,5 @@ Python examples for calling it programmatically, and the Claude Desktop config s
 
 Use a `quickstart/<lang>` example if you just want to see the HTTP call work. Use an
 `sdk/<lang>` package if you're integrating this into a real app — it gives you typed
-responses, a typed error, request timeouts, and the `recommendation` helper instead of hand-
+responses, a typed error, request timeouts, and the `action`-based helper instead of hand-
 parsing JSON on every call site.

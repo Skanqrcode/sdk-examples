@@ -3,7 +3,7 @@
 // see ../server/README.md.
 //
 //   npm install @modelcontextprotocol/sdk
-//   SKANQRCODE_API_KEY=lure_test_... npx tsx typescript.ts "https://example.com/login"
+//   SKANQRCODE_API_KEY=sk_test_... npx tsx typescript.ts "https://example.com/login"
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -37,7 +37,7 @@ const [block] = result.content as Array<{ type: "text"; text: string }>;
 const parsed = JSON.parse(block.text);
 
 console.log(parsed);
-if (parsed.recommendation === "block") {
+if (parsed.action === "block") {
   console.error(`Refusing to fetch ${target}: ${parsed.reasons.join(", ")}`);
   process.exit(1);
 }

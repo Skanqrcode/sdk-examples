@@ -1,7 +1,7 @@
 // Quickstart: call POST /v1/check directly with URLSession + async/await.
 // No SDK abstraction — see ../../sdk/swift for the installable package.
 //
-// Run: SKANQRCODE_API_KEY=lure_test_... swift main.swift
+// Run: SKANQRCODE_API_KEY=sk_test_... swift main.swift
 
 import Foundation
 
@@ -11,11 +11,12 @@ struct CheckRequest: Encodable {
 
 struct CheckResponse: Decodable {
     let verdict: String
+    let action: String // allow | warn | block — branch on this
     let mode: String
-    let score: Int
     let reasons: [String]
     let cached: Bool
-    let partial: Bool
+    let executionTimeMs: Int
+    let environment: String // sandbox | production
     let requestId: String
 }
 
@@ -23,7 +24,7 @@ struct APIErrorBody: Decodable {
     struct Detail: Decodable {
         let code: String
         let message: String
-        let requestId: String
+        let requestId: String?
     }
     let error: Detail
 }
@@ -31,11 +32,14 @@ struct APIErrorBody: Decodable {
 struct APIError: Error, CustomStringConvertible {
     let code: String
     let message: String
-    let requestId: String
+    let requestId: String?
     let httpStatus: Int
+    let retryAfter: String? // Retry-After header (seconds), set on 429s
 
     var description: String {
-        "SkanQRCode API error [\(httpStatus) \(code)]: \(message) (requestId: \(requestId))"
+        var text = "SkanQRCode API error [\(httpStatus) \(code)]: \(message) (requestId: \(requestId ?? "none"))"
+        if let retryAfter { text += " — retry after \(retryAfter)s" }
+        return text
     }
 }
 
@@ -61,12 +65,14 @@ func checkURL(_ target: String) async throws -> CheckResponse {
     }
 
     guard (200...299).contains(httpResponse.statusCode) else {
-        let body = try JSONDecoder().decode(APIErrorBody.self, from: data)
+        // A proxy's HTML 502 isn't the documented JSON: fall back to a synthetic `internal` error.
+        let body = try? JSONDecoder().decode(APIErrorBody.self, from: data)
         throw APIError(
-            code: body.error.code,
-            message: body.error.message,
-            requestId: body.error.requestId,
-            httpStatus: httpResponse.statusCode
+            code: body?.error.code ?? "internal",
+            message: body?.error.message ?? "Unexpected HTTP \(httpResponse.statusCode) response",
+            requestId: body?.error.requestId,
+            httpStatus: httpResponse.statusCode,
+            retryAfter: httpResponse.value(forHTTPHeaderField: "Retry-After")
         )
     }
 
@@ -77,18 +83,27 @@ do {
     let result = try await checkURL(target)
     print("target:    \(target)")
     print("verdict:   \(result.verdict)")
+    print("action:    \(result.action)")
     print("mode:      \(result.mode)")
-    print("score:     \(result.score)")
     print("reasons:   \(result.reasons)")
     print("cached:    \(result.cached)")
-    print("partial:   \(result.partial)")
+    print("time:      \(result.executionTimeMs) ms")
+    print("env:       \(result.environment)")
     print("requestId: \(result.requestId)")
 
-    if result.verdict == "malicious" {
+    if result.action == "block" {
         exit(2)
     }
 } catch let error as APIError {
     print(error.description)
+    switch error.code {
+    case "unauthorized", "payment_required", "quota_exceeded":
+        print("Not retryable: check your API key, billing status or monthly quota.")
+    case "rate_limited", "auth_unavailable", "internal":
+        print("Retryable: wait (see Retry-After) and try again.")
+    default:
+        break // invalid_request, forbidden, not_found, plan_feature_unavailable
+    }
     exit(1)
 } catch {
     print("Request failed: \(error)")

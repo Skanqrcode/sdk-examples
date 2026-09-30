@@ -1,53 +1,67 @@
 # SkanQRCode MCP examples
 
-[skanqrcode.com/mcp](https://skanqrcode.com/mcp) advertises a published MCP server
-(`npx -y @skanqrcode/mcp-server`, a `check_url` tool, auth via a `SKAN_API_KEY` env var) for
-wiring URL/QR-code safety checks into Claude Desktop and other MCP clients. As of writing,
-the `skanqrcode-api` repo has no server implementation and no MCP server code — only the
-`docs/openapi.yaml` HTTP contract, which `skanqrcode-api/CLAUDE.md` §15 says does **not**
-by itself authorize hosting an MCP server.
+This directory has two parts:
 
-So this directory has two parts:
-
-- **[`server/`](server)** — a reference/example MCP server we wrote against the real HTTP
-  contract in [`../docs/api-contract.md`](../docs/api-contract.md). It's a working
-  implementation you can run and adapt, published here as `@skanqrcode/mcp-server-example` —
-  deliberately *not* the same package name as the one on the landing page, since we can't
-  verify this matches whatever `@skanqrcode/mcp-server` actually ships. If/when that package's
-  real tool schema is confirmed, treat this as a starting point, not a drop-in.
-- **[`clients/`](clients)** — how to *call* an MCP `check_url`-style tool from code, once you
-  have a working server (this one or the real one). These are written against the
-  `@skanqrcode/mcp-server-example` server's tool schema below, which mirrors the landing page's
-  advertised interface (`check_url(target)` -> `{ verdict, action, ... }` summary) as closely as
-  possible while staying truthful to the underlying `/v1/check` response.
+- **[`server/`](server)** — a reference MCP server written against the HTTP contract in
+  [`../docs/api-contract.md`](../docs/api-contract.md). It's a working implementation you can
+  run and adapt, published here as `@skanqrcode/mcp-server-example`. It is example code, not
+  the official `@skanqrcode/mcp-server` package advertised on
+  [skanqrcode.com/mcp](https://skanqrcode.com/mcp) — the tool schema and env var names there
+  may differ from this one, so check them before swapping one for the other.
+- **[`clients/`](clients)** — how to *call* a `check_url`-style MCP tool from code, once you
+  have a working server. These are written against this server's tool schema below.
 
 ## The `check_url` tool
 
 Input:
 
 ```json
-{ "target": "https://example.com/login" }
+{ "target": "https://example.com/login", "userId": "user-4821" }
 ```
 
-Output (MCP tool result — a text content block containing this JSON, per MCP convention for
-structured results):
+`target` (1–4096 chars) is required. `userId` (1–128 chars) is optional: an opaque end-user
+identifier that enables per-user result caching; the API hashes it before use.
+
+Output (MCP tool result — a text content block containing the `/v1/check` response as JSON,
+per MCP convention for structured results):
 
 ```json
 {
   "verdict": "malicious",
+  "action": "block",
   "mode": "url",
-  "score": 97,
-  "reasons": ["URLHAUS_ACTIVE", "WEBRISK_MALWARE"],
-  "recommendation": "block",
+  "reasons": ["ACTIVE_THREAT_FEED_MATCH", "KNOWN_MALWARE_MATCH"],
+  "finalUrl": null,
   "cached": false,
-  "partial": true,
-  "requestId": "req_01J9Z8QAENP0S2"
+  "executionTimeMs": 183,
+  "environment": "production",
+  "licensedForProduction": true,
+  "requestId": "req_01j9z8qaenp0s2c4d6f8g0h1jk"
 }
 ```
 
-`recommendation` is `proceed` / `warn` / `block`, derived the same way as every SDK in this
-repo (`not_malicious` -> `proceed`, `suspicious` -> `warn`, `malicious` -> `block`) — it's the
-field an agent should actually branch on before fetching or opening the target.
+`action` is `allow` / `warn` / `block` and comes straight from the API (`not_malicious` →
+`allow`, `suspicious` → `warn`, `malicious` → `block`) — it's the field an agent should branch
+on before fetching or opening the target. For IP targets the result also carries a `related`
+array of recently associated hosts.
+
+Two fields worth having the agent respect:
+
+- `environment: "sandbox"` / `licensedForProduction: false` — an `sk_test_` key; results are
+  for integration testing, not production enforcement.
+- `executionTimeMs >= 180` — the evaluation hit its 180 ms deadline, so some checks didn't
+  finish and the result is best-effort.
+
+On failure the tool returns `isError: true` with a message that includes the API's error code,
+its `requestId`, and the `Retry-After` seconds for a `rate_limited` 429.
+
+### What's deliberately not a tool
+
+The spec marks billing as human-in-the-loop (an agent should hand a checkout/portal URL to a
+person, never complete checkout itself) and the webhook as not part of the agent surface. The
+allow/block-list write endpoints need an `admin`-scope key and change enforcement for the whole
+tenant, so they're also left out — add them only if you want an agent to have that power. If
+you do, the SDKs under [`../sdk`](../sdk) already wrap them.
 
 ## Claude Desktop / generic MCP client config
 
@@ -58,7 +72,7 @@ field an agent should actually branch on before fetching or opening the target.
       "command": "npx",
       "args": ["-y", "@skanqrcode/mcp-server-example"],
       "env": {
-        "SKANQRCODE_API_KEY": "lure_test_..."
+        "SKANQRCODE_API_KEY": "sk_test_..."
       }
     }
   }

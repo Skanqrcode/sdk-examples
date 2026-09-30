@@ -1,5 +1,5 @@
 import skanqrcode from "./index.js";
 
-const { SkanQRCodeClient, SkanQRCodeError, shouldBlock, isSafe } = skanqrcode;
+const { SkanQRCodeClient, SkanQRCodeError, ERROR_CODES, shouldBlock, isSafe } = skanqrcode;
 
-export { SkanQRCodeClient, SkanQRCodeError, shouldBlock, isSafe };
+export { SkanQRCodeClient, SkanQRCodeError, ERROR_CODES, shouldBlock, isSafe };

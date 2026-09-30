@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
+// The SDK's `Action` enum clashes with Flutter's `Action` class.
+import 'package:flutter/material.dart' hide Action;
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:skanqrcode/skanqrcode.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // Mobile apps don't have a shell environment, so the key is baked in at
-// build time: flutter run --dart-define=SKANQRCODE_API_KEY=lure_live_...
+// build time: flutter run --dart-define=SKANQRCODE_API_KEY=sk_live_...
 const _apiKey = String.fromEnvironment('SKANQRCODE_API_KEY');
 
 class ScannerScreen extends StatefulWidget {
@@ -43,9 +44,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
       final result = await _client.checkUrl(target);
       await _handleResult(target, result);
     } on SkanQRCodeException catch (e) {
+      // Fail closed on every API error: the link is never opened.
       await _showBlockingDialog(
         title: 'Couldn\'t check this link',
-        body: '${e.message}\n\nRequest ID: ${e.requestId}',
+        body: _messageFor(e),
       );
     } catch (_) {
       // Network failure or timeout: no verdict, so fail closed rather than
@@ -62,20 +64,49 @@ class _ScannerScreenState extends State<ScannerScreen> {
     await _controller.start();
   }
 
+  /// Maps an API error to user-facing text. Nothing here ever opens the link.
+  String _messageFor(SkanQRCodeException e) {
+    final requestId = 'Request ID: ${e.requestId ?? 'none'}';
+    switch (e.code) {
+      case ErrorCode.rateLimited:
+        final wait = e.retryAfter == null ? 'in a moment' : 'in ${e.retryAfter} seconds';
+        return 'Too many scans right now. Try again $wait.';
+      case ErrorCode.quotaExceeded ||
+            ErrorCode.paymentRequired ||
+            ErrorCode.unauthorized ||
+            ErrorCode.forbidden:
+        // Not something the user can fix by rescanning: an API key, plan or
+        // quota problem.
+        return 'Link checking isn\'t available because of a configuration '
+            'problem. Contact the app\'s developer.\n\n${e.code}\n$requestId';
+      default:
+        // invalid_request, auth_unavailable, internal, unknown codes, non-JSON
+        // proxy errors…
+        return 'We couldn\'t verify this link is safe, so it wasn\'t opened. '
+            'Please try scanning again.\n\n$requestId';
+    }
+  }
+
   Future<void> _handleResult(String target, CheckResult result) async {
-    switch (result.recommendation) {
-      case Recommendation.proceed:
+    switch (result.action) {
+      case Action.allow:
         await launchUrl(Uri.parse(target));
-      case Recommendation.warn:
+      case Action.warn:
         final proceed = await _showConfirmDialog(
           title: 'This link looks suspicious',
           reasons: result.reasons,
         );
         if (proceed) await launchUrl(Uri.parse(target));
-      case Recommendation.block:
+      case Action.block:
         await _showBlockingDialog(
           title: 'This link is unsafe',
           body: 'SkanQRCode blocked this link:\n\n${result.reasons.join('\n')}',
+        );
+      case Action.unknown:
+        // An action this SDK version doesn't know: fail closed.
+        await _showBlockingDialog(
+          title: 'Couldn\'t check this link',
+          body: 'We couldn\'t verify this link is safe, so it wasn\'t opened.',
         );
     }
   }

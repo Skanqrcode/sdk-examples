@@ -9,6 +9,6 @@ contract, and [`../../sdk/java`](../../sdk/java) for a typed client.
 Requires JDK 11+.
 
 ```bash
-export SKANQRCODE_API_KEY=lure_test_...
+export SKANQRCODE_API_KEY=sk_test_...
 java Main.java
 ```

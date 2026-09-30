@@ -9,6 +9,6 @@ contract, and [`../../sdk/kotlin`](../../sdk/kotlin) for a typed client.
 Requires a Kotlin compiler (`brew install kotlin` or see [kotlinlang.org](https://kotlinlang.org/docs/command-line.html)) and JDK 11+.
 
 ```bash
-export SKANQRCODE_API_KEY=lure_test_...
+export SKANQRCODE_API_KEY=sk_test_...
 kotlin Main.kt
 ```
