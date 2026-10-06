@@ -66,7 +66,7 @@ pub struct CheckResult {
     #[serde(rename = "finalUrl")]
     pub final_url: Option<String>,
     pub cached: bool,
-    /// >= 180 means the evaluation deadline was hit and the result is best-effort.
+    /// Server-side evaluation time in milliseconds.
     #[serde(rename = "executionTimeMs")]
     pub execution_time_ms: u64,
     pub environment: Environment,

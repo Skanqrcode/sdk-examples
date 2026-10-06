@@ -87,7 +87,7 @@ public struct CheckResult: Codable, Sendable {
     /// Where a shortened link resolved to, if a redirect was followed.
     public let finalUrl: String?
     public let cached: Bool
-    /// Server-side evaluation time. >= 180 means the deadline was hit and the result is best-effort.
+    /// Server-side evaluation time in milliseconds.
     public let executionTimeMs: Int
     public let environment: CheckEnvironment
     /// `false` on the free sandbox plan — use those results for integration testing only.

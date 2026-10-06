@@ -53,7 +53,6 @@ public class Example {
 only; empty otherwise). `action` is what to branch on; `shouldBlock()` (`action == BLOCK`) and
 `isSafe()` (`action == ALLOW`) are shortcuts. `WARN` is neither — surface it to the user.
 
-- `executionTimeMs >= 180` means the evaluation deadline was hit and the result is best-effort.
 - `environment == "sandbox"` / `licensedForProduction == false` (`sk_test_` keys) is
   integration-test output only — don't enforce on it in production.
 

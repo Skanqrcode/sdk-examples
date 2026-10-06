@@ -33,7 +33,7 @@ export interface CheckResult {
   reasons: string[];
   finalUrl: string | null;
   cached: boolean;
-  /** >= 180 means the deadline was hit and the result is best-effort. */
+  /** Server-side evaluation time in milliseconds. */
   executionTimeMs: number;
   environment: Environment;
   licensedForProduction: boolean;

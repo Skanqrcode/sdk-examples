@@ -23,7 +23,7 @@
  * @property {string[]} reasons reason codes as plain strings
  * @property {string|null} finalUrl
  * @property {boolean} cached
- * @property {number} executionTimeMs >= 180 means the deadline was hit (best-effort result)
+ * @property {number} executionTimeMs Server-side evaluation time in milliseconds
  * @property {Environment} environment
  * @property {boolean} licensedForProduction
  * @property {string} requestId

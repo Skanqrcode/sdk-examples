@@ -59,10 +59,6 @@ async function main() {
     console.log("\nDecision: PROCEED");
   }
 
-  // executionTimeMs >= 180 means the evaluation deadline was hit: best-effort result.
-  if (result.executionTimeMs >= 180) {
-    console.log("Note: evaluation deadline hit; result is best-effort.");
-  }
   if (!result.licensedForProduction) {
     console.log("Note: sandbox key — integration testing only, don't enforce on this in production.");
   }

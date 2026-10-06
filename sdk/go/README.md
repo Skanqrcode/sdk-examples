@@ -60,8 +60,7 @@ func main() {
 strings), `FinalURL` (nil unless a redirect was followed), `Cached`, `ExecutionTimeMs`,
 `Environment` (`sandbox` / `production`), `LicensedForProduction`, `RequestID`, and `Related` (IP
 mode only). Branch on `Action`; `ShouldBlock()` and `IsSafe()` are shortcuts for block / allow,
-and `warn` is neither. `ExecutionTimeMs >= 180` means the evaluation deadline was hit and the
-result is best-effort. Sandbox results are for integration testing only.
+and `warn` is neither. Sandbox results are for integration testing only.
 
 ## Usage and lists
 

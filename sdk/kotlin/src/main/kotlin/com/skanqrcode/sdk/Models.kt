@@ -57,7 +57,7 @@ data class CheckResult(
     /** Where a shortened link resolved to, if a redirect was followed. */
     val finalUrl: String? = null,
     val cached: Boolean,
-    /** Server-side evaluation time. At or above 180 the deadline was hit and the result is best-effort. */
+    /** Server-side evaluation time in milliseconds. */
     val executionTimeMs: Int,
     val environment: Environment,
     /** False on the free sandbox plan; treat those results as integration-test output only. */

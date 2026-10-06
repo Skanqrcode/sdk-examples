@@ -33,7 +33,7 @@ per MCP convention for structured results):
   "reasons": ["ACTIVE_THREAT_FEED_MATCH", "KNOWN_MALWARE_MATCH"],
   "finalUrl": null,
   "cached": false,
-  "executionTimeMs": 183,
+  "executionTimeMs": 38,
   "environment": "production",
   "licensedForProduction": true,
   "requestId": "req_01j9z8qaenp0s2c4d6f8g0h1jk"
@@ -49,8 +49,6 @@ Two fields worth having the agent respect:
 
 - `environment: "sandbox"` / `licensedForProduction: false` — an `sk_test_` key; results are
   for integration testing, not production enforcement.
-- `executionTimeMs >= 180` — the evaluation hit its 180 ms deadline, so some checks didn't
-  finish and the result is best-effort.
 
 On failure the tool returns `isError: true` with a message that includes the API's error code,
 its `requestId`, and the `Retry-After` seconds for a `rate_limited` 429.

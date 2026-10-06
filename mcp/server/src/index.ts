@@ -71,8 +71,7 @@ server.tool(
     "caller's monthly SkanQRCode quota per call, including cache hits. Returns a verdict " +
     "(malicious/suspicious/not_malicious) and the recommended action (block/warn/allow) — branch " +
     "on `action`: block means do not fetch, warn means ask the user first. If `environment` is " +
-    "`sandbox` (`licensedForProduction: false`) the result is for integration testing only. If " +
-    "`executionTimeMs` is 180 or more, some checks hit the deadline and the result is best-effort.",
+    "`sandbox` (`licensedForProduction: false`) the result is for integration testing only.",
   {
     target: z.string().min(1).max(4096).describe("The URL or IP address to classify."),
     userId: z

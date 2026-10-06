@@ -59,7 +59,7 @@ public final class CheckResult {
         return cached;
     }
 
-    /** Server-side evaluation time. At or above 180 the deadline was hit and the result is best-effort. */
+    /** Server-side evaluation time in milliseconds. */
     public int getExecutionTimeMs() {
         return executionTimeMs;
     }

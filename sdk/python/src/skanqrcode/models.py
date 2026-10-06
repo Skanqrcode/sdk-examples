@@ -64,7 +64,7 @@ class CheckResult:
     reasons: list[str]
     final_url: str | None
     cached: bool
-    # >= 180 means the evaluation deadline was hit and the result is best-effort.
+    # Server-side evaluation time in milliseconds.
     execution_time_ms: int
     environment: Environment
     licensed_for_production: bool

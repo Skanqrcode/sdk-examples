@@ -49,7 +49,7 @@ Future<void> main() async {
 `CheckResult` fields: `verdict`, `action`, `mode`, `reasons` (plain strings), `finalUrl`,
 `cached`, `executionTimeMs`, `environment` (`sandbox`/`production`), `licensedForProduction`,
 `requestId`, and `related` (IP mode only). `score` and `partial` no longer exist: branch on
-`action`, and compare `executionTimeMs` with 180 to spot a best-effort result. `userId` is
+`action`. `userId` is
 optional and only sent when provided. Sandbox results are for integration testing only.
 
 `result.shouldBlock` is `action == Action.block` and `result.isSafe` is

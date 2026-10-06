@@ -66,9 +66,7 @@ already trust.
 - **Consumes one unit of the tenant's monthly quota per successful call, including cache
   hits.** Unparseable input (400) and blocked requests (429) are not billed.
 - Quota and the per-minute limit are counted **per tenant** across all keys and IPs.
-- The evaluation has a fixed **180 ms deadline** and always returns a verdict. Compare
-  `executionTimeMs` with 180: a value at or above it means some checks didn't finish and the
-  result is best-effort. (This replaces the old `partial` flag.)
+- The evaluation always returns a verdict.
 - Sandbox (`sk_test_`) keys return `environment: "sandbox"` and `licensedForProduction: false`.
   Use those results for integration testing only — don't enforce on them in production.
 
@@ -95,7 +93,7 @@ Request bodies over 8 KB are rejected with 400.
   "reasons": ["ACTIVE_THREAT_FEED_MATCH", "KNOWN_MALWARE_MATCH"],
   "finalUrl": null,
   "cached": false,
-  "executionTimeMs": 183,
+  "executionTimeMs": 38,
   "environment": "production",
   "licensedForProduction": true,
   "requestId": "req_01j9z8qaenp0s2c4d6f8g0h1jk"
@@ -110,7 +108,7 @@ Request bodies over 8 KB are rejected with 400.
 | `reasons` | string[] | Reason codes that contributed — see [Reason codes](#reason-codes). |
 | `finalUrl` | string \| null | Where a shortened link resolved to, if a redirect was followed. |
 | `cached` | boolean | True only if served from this tenant's own per-user cache. |
-| `executionTimeMs` | integer ≥ 0 | Server-side evaluation time. ≥ 180 ⇒ deadline hit, best-effort result. |
+| `executionTimeMs` | integer ≥ 0 | Server-side evaluation time in milliseconds. |
 | `environment` | `"sandbox" \| "production"` | Derived from the key's plan, never from the request. |
 | `licensedForProduction` | boolean | `false` on the free sandbox plan. Never changes `verdict`/`action`. |
 | `requestId` | string | Quote this to support. |
@@ -147,9 +145,9 @@ reporting, not for deciding whether the next call will succeed.
 {
   "tenantId": "ten_01j9z2k3f5g6h7a1b2c3d4e5f6",
   "month": "2026-09",
-  "monthlyQuota": 100000,
+  "monthlyQuota": 50000,
   "totalRequests": 42817,
-  "availableRequests": 57183
+  "availableRequests": 7183
 }
 ```
 
@@ -167,20 +165,20 @@ Hour-by-hour usage for one month, with per-minute rate-limit utilization.
 {
   "tenantId": "ten_01j9z2k3f5g6h7a1b2c3d4e5f6",
   "month": "2026-09",
-  "rpmLimit": 300,
-  "hourlyCapacity": 18000,
+  "rpmLimit": 30,
+  "hourlyCapacity": 1800,
   "hours": [
     {
       "hour": "2026-09-01T09:00:00Z",
       "mode": "url",
-      "total": 17650,
+      "total": 1766,
       "capacityUsedPercent": 98.1,
-      "blockedRpm": 340,
+      "blockedRpm": 34,
       "blockedQuota": 0,
       "malicious": 5,
       "suspicious": 40,
-      "notMalicious": 17605,
-      "cached": 12002
+      "notMalicious": 1721,
+      "cached": 1200
     }
   ]
 }

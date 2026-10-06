@@ -37,8 +37,7 @@ console.log(result.environment, result.executionTimeMs, "ms");
 
 `checkUrl(target, userId?)` takes an optional opaque end-user id that enables per-user result
 caching. `shouldBlock(result)` is true only for `action === "block"` and `isSafe(result)` only
-for `"allow"` — `warn` is neither, so surface it to the user. An `executionTimeMs` of 180 or
-more means the evaluation deadline was hit and the result is best-effort.
+for `"allow"` — `warn` is neither, so surface it to the user.
 
 ## Usage and lists
 

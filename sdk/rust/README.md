@@ -51,7 +51,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 strings), `final_url`, `cached`, `execution_time_ms`, `environment` (`Sandbox` / `Production`),
 `licensed_for_production`, `request_id`, and `related` (IP mode only). Branch on `action`;
 `should_block()` and `is_safe()` are shortcuts for block / allow, and warn is neither.
-`execution_time_ms >= 180` means the evaluation deadline was hit and the result is best-effort.
 Sandbox results are for integration testing only.
 
 ## Usage and lists

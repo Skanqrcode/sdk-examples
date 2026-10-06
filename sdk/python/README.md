@@ -31,8 +31,7 @@ with SkanQRCodeClient(api_key=os.environ["SKANQRCODE_API_KEY"]) as client:
 `CheckResult` fields: `verdict`, `action` (`allow` / `warn` / `block`), `mode`, `reasons` (plain
 strings), `final_url`, `cached`, `execution_time_ms`, `environment` (`sandbox` / `production`),
 `licensed_for_production`, `request_id`, and `related` (IP mode only). Branch on `action`;
-`warn` is neither safe nor blocked. `execution_time_ms >= 180` means the evaluation deadline was
-hit and the result is best-effort. Sandbox results are for integration testing only.
+`warn` is neither safe nor blocked. Sandbox results are for integration testing only.
 
 ## Usage (async)
 

@@ -69,7 +69,7 @@ type CheckResult struct {
 	// FinalURL is where a shortened link resolved to, or nil.
 	FinalURL *string `json:"finalUrl"`
 	Cached   bool    `json:"cached"`
-	// ExecutionTimeMs >= 180 means the evaluation deadline was hit and the result is best-effort.
+	// ExecutionTimeMs is the server-side evaluation time in milliseconds.
 	ExecutionTimeMs       int         `json:"executionTimeMs"`
 	Environment           Environment `json:"environment"`
 	LicensedForProduction bool        `json:"licensedForProduction"`

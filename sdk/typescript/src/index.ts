@@ -56,7 +56,7 @@ export interface CheckResult {
   finalUrl: string | null;
   /** True only if served from this tenant's own per-user cache. */
   cached: boolean;
-  /** Server-side evaluation time. >= 180 means the deadline was hit and the result is best-effort. */
+  /** Server-side evaluation time in milliseconds. */
   executionTimeMs: number;
   environment: Environment;
   /** False on the free sandbox plan. Never changes verdict/action. */
