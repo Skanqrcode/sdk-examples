@@ -1,22 +1,51 @@
 {
-  "name": "@skanqrcode/mcp-server-example",
-  "version": "0.2.0",
-  "description": "Reference MCP server exposing SkanQRCode's check_url tool over stdio. Example code, not the official @skanqrcode/mcp-server package.",
+  "name": "@skanqrcode/mcp-server",
+  "version": "1.0.0",
+  "description": "Official SkanQRCode MCP server: check whether a URL or IP is safe before an AI agent fetches or opens it.",
+  "license": "Apache-2.0",
   "type": "module",
+  "mcpName": "com.skanqrcode/mcp-server",
   "bin": {
-    "skanqrcode-mcp-server-example": "dist/index.js"
+    "skanqrcode-mcp-server": "dist/index.js"
   },
-  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Skanqrcode/sdk-examples.git",
+    "directory": "mcp/server"
+  },
+  "homepage": "https://skanqrcode.com/mcp",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "url-safety",
+    "phishing",
+    "quishing",
+    "ai-agents"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js"
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --experimental-strip-types --no-warnings --test test/*.test.ts",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.0",
-    "zod": "^3.23.8"
+    "@modelcontextprotocol/sdk": "1.31.0",
+    "zod": "4.6.5"
   },
   "devDependencies": {
-    "typescript": "^5.6.2",
-    "@types/node": "^22.7.4"
+    "@types/node": "22.20.5",
+    "typescript": "7.0.2"
   }
 }

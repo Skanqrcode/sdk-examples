@@ -58,10 +58,9 @@ theirs from `SKANQRCODE_API_KEY`. Results from a sandbox key are for integration
 
 ## MCP
 
-[`mcp/`](mcp) has a reference MCP server (`check_url` tool over stdio) plus TypeScript and
-Python examples for calling it programmatically, and the Claude Desktop config snippet. See
-[`mcp/README.md`](mcp/README.md) for why it's *a* reference implementation rather than *the*
-`@skanqrcode/mcp-server` package advertised on the landing page.
+[`mcp/server`](mcp/server) is the official `@skanqrcode/mcp-server` package (`check_url` and
+`get_usage` tools over stdio). [`mcp/`](mcp) also has TypeScript and Python examples for calling
+it from your own agent, and the Claude Desktop config snippet.
 
 ## Picking an SDK vs. the raw API
 

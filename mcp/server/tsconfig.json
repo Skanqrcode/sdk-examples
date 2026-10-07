@@ -1,14 +1,19 @@
 {
+  // Type-checks src and test without emitting; tsconfig.build.json emits src to dist.
   "compilerOptions": {
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "outDir": "dist",
-    "rootDir": "src",
+    "lib": ["ES2022"],
+    "types": ["node"],
     "strict": true,
-    "esModuleInterop": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "verbatimModuleSyntax": true,
     "skipLibCheck": true,
-    "declaration": true
+    // Sources import "./x.ts" so tests run under Node type stripping; the build rewrites them to .js.
+    "rewriteRelativeImportExtensions": true,
+    "noEmit": true
   },
-  "include": ["src"]
+  "include": ["src", "test"]
 }

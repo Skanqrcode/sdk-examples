@@ -1,0 +1,29 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.skanqrcode/mcp-server",
+  "title": "SkanQRCode",
+  "description": "Check whether a URL or IP is safe before an AI agent fetches or opens it.",
+  "websiteUrl": "https://skanqrcode.com/mcp",
+  "repository": {
+    "url": "https://github.com/Skanqrcode/sdk-examples",
+    "source": "github",
+    "subfolder": "mcp/server"
+  },
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@skanqrcode/mcp-server",
+      "version": "1.0.0",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "SKANQRCODE_API_KEY",
+          "description": "Your SkanQRCode API key (sk_test_... or sk_live_...) from app.skanqrcode.com.",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}
